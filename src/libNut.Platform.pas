@@ -19,6 +19,12 @@ type
     class procedure WaitVSync; virtual;
 
     class function GenerateGUID: TGUID; virtual;
+
+    class function  GetAllEnv: String; virtual;
+    class function  GetEnv(const AName: String; const ADefault: String = ''): String; virtual;
+    class procedure SetEnv(const AName: String; const AValue:   String; const APersistent: Boolean = False); virtual;
+
+    class function ExpandEnv(const AValue: String): String;
   end;
   {$ENDREGION}
 
@@ -31,6 +37,7 @@ implementation
 
 uses
   libNut.Types.Convert,
+  libNut.Strings,
   libNut.Exceptions;
 
 {$REGION 'TPlatform'}
@@ -87,6 +94,49 @@ class function TPlatform.GenerateGUID;
 begin
   Result := TGUID.Empty;
 end;
-{$ENDREGION}
+
+class function TPlatform.GetAllEnv;
+begin
+  Result := '';
+end;
+
+class function TPlatform.GetEnv;
+begin
+  Result := ADefault;
+end;
+
+class procedure TPlatform.SetEnv;
+begin
+  {}
+end;
+
+class function TPlatform.ExpandEnv;
+var
+  NamBuf: String;
+  VarBuf: String;
+  EnvBuf: String;
+  i:      Integer;
+begin
+  Result := AValue;
+
+  EnvBuf := GetAllEnv;
+
+  i := 0;
+
+  repeat
+    VarBuf := '';
+
+    while EnvBuf[i] <> #0 do
+    begin
+      VarBuf := VarBuf + EnvBuf[i];
+      Inc(i);
+    end;
+
+    Inc(i);
+
+    NamBuf := VarBuf.SplitFirst('=');
+    Result := Result.Replace('%' + NamBuf + '%', VarBuf);
+  until EnvBuf[i] = #0;
+end;{$ENDREGION}
 
 end.

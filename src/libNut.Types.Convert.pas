@@ -40,6 +40,10 @@ function StrToPtr(const AValue: String; const ADefault: Pointer = nil): Pointer;
 function IntToBin(const AValue: Int64; const AMinSize: Integer = 8): String; inline;
 function IntToOct(const AValue: Int64; const AMinSize: Integer = 3): String; inline;
 function IntToHex(const AValue: Int64; const AMinSize: Integer = 2): String; inline;
+
+function BinToInt(const AValue: String; const ADefault: Integer = 0): Integer; inline;
+function OctToInt(const AValue: String; const ADefault: Integer = 0): Integer; inline;
+function HexToInt(const AValue: String; const ADefault: Integer = 0): Integer; inline;
 {$ENDREGION}
 
 implementation
@@ -296,6 +300,21 @@ end;
 function IntToHex;
 begin
   Result := IntToStr(AValue, AMinSize, 16);
+end;
+
+function BinToInt;
+begin
+  Result := BaseXToInt(AValue, 2, ADefault);
+end;
+
+function OctToInt;
+begin
+  Result := BaseXToInt(AValue, 8, ADefault);
+end;
+
+function HexToInt;
+begin
+  Result := BaseXToInt(AValue, 16, ADefault);
 end;
 {$ENDREGION}
 

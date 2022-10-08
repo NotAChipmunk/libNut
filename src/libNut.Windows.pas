@@ -21,6 +21,8 @@ type
   private class var
     FHighResTick: Boolean;
     FTickScale:   Double;
+  public const
+    EnvRegPath = 'SYSTEM\CurrentControlSet\Control\Session Manager\Environment';
   public
     class constructor Create;
 
@@ -36,6 +38,10 @@ type
     class procedure WaitVSync; override;
 
     class function GenerateGUID: TGUID; override;
+
+    class function  GetAllEnv: String; override;
+    class function  GetEnv(const AName: String; const ADefault: String = ''): String;                        override;
+    class procedure SetEnv(const AName: String; const AValue:   String; const APersistent: Boolean = False); override;
   end;
   {$ENDREGION}
 
@@ -293,8 +299,9 @@ var
 
 implementation
 
-{uses
-  Winapi.DwmApi,
+uses
+  libNut.Registry;
+  {Winapi.DwmApi,
   Winapi.CommCtrl,
   Winapi.UxTheme;{}
 
@@ -350,6 +357,48 @@ class function TPlatformWin.GenerateGUID;
 begin
   if UuidCreate(Result) <> 0 then
     Result := TGUID.Empty;
+end;
+
+class function TPlatformWin.GetAllEnv: String;
+var
+  Buf: PChar;
+begin
+  Buf := GetEnvironmentStrings;
+
+  if Buf = nil then
+    Exit('');
+
+  try
+    Result := Buf;
+  finally
+    FreeEnvironmentStrings(Buf);
+  end;
+end;
+
+class function TPlatformWin.GetEnv;
+const
+  MaxSize = 1024;
+begin
+  SetLength(Result, MaxSize);
+  SetLength(Result, GetEnvironmentVariable(PChar(AName), PChar(Result), MaxSize));
+
+  if Length(Result) = 0 then
+    Result := TRegistry.ReadKey(HKEY_LOCAL_MACHINE, EnvRegPath, AName, ADefault);
+end;
+
+class procedure TPlatformWin.SetEnv;
+begin
+  if APersistent then
+  begin
+    if Length(AValue) = 0 then
+      TRegistry.DeleteKey(HKEY_LOCAL_MACHINE, EnvRegPath, AName)
+    else
+      TRegistry.WriteKey(HKEY_LOCAL_MACHINE, EnvRegPath, AName, AValue);
+
+    SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 0, SMTO_NORMAL, 1000, nil);
+  end;
+
+  SetEnvironmentVariable(PChar(AName), PChar(AValue));
 end;
 {$ENDREGION}
 
