@@ -43,6 +43,7 @@ function LinearStep  (const APoint: Extended; const AMin: Extended = 0; const AM
 function SmoothStep  (const APoint: Extended; const AMin: Extended = 0; const AMax: Extended = 1): Extended;
 function SmootherStep(const APoint: Extended; const AMin: Extended = 0; const AMax: Extended = 1): Extended;
 function CosStep     (const APoint: Extended; const AMin: Extended = 0; const AMax: Extended = 1): Extended;
+function BellStep    (const APoint: Extended; const AMin: Extended = 0; const AMax: Extended = 1): Extended;
 
 function Lerp(const AMin, AMax, APoint: Extended): Extended;
 
@@ -52,6 +53,8 @@ function Map(const AValue, AFromLow, AFromHigh, AToLow, AToHigh: Extended): Exte
 {$REGION 'Geometric'}
 function DegToRad(const ADeg: Extended): Extended;
 function RadToDeg(const ARad: Extended): Extended;
+
+procedure SinCos(const ATheta: Extended; var ASin, ACos: Extended); inline;
 {$ENDREGION}
 
 {$REGION 'Exponent'}
@@ -249,6 +252,12 @@ begin
   Result := (1 - Cos(Result * PI)) * 0.5;
 end;
 
+function BellStep;
+begin
+  Result := LinearStep(APoint, AMin, AMax);
+  Result := (1 - Cos(Result * PI * 2)) * 0.5;
+end;
+
 function Lerp;
 begin
   Result := AMin + (AMax - AMin) * APoint;
@@ -269,6 +278,21 @@ end;
 function RadToDeg;
 begin
   Result := ARad * (180 / PI);
+end;
+
+procedure SinCos;
+{$IF SizeOf(Extended) > SizeOf(Double)}
+begin
+  SineCosine(ATheta, ASin, ACos);
+{$ELSE}
+var
+  S, C: Double;
+begin
+  SineCosine(ATheta, S, C);
+
+  ASin := S;
+  ACos := C;
+{$ENDIF}
 end;
 {$ENDREGION}
 

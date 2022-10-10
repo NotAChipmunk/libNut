@@ -56,7 +56,7 @@ begin
   else if PT = TypeInfo(Double)   then Result := Round(PDouble(@ALeft)^   - PDouble(@ARight)^)
   else if PT = TypeInfo(Extended) then Result := Round(PExtended(@ALeft)^ - PExtended(@ARight)^)
 
-  // TODO: String
+  // String
   else if PT = TypeInfo(String) then Result := PString(@ALeft)^.Compare(PString(@ARight)^)
 
   else if PT = TypeInfo(AnsiString)    then Result := String(PAnsiString(@ALeft)^).Compare(String(PAnsiString(@ARight)^))

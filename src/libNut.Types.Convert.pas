@@ -41,9 +41,9 @@ function IntToBin(const AValue: Int64; const AMinSize: Integer = 8): String; inl
 function IntToOct(const AValue: Int64; const AMinSize: Integer = 3): String; inline;
 function IntToHex(const AValue: Int64; const AMinSize: Integer = 2): String; inline;
 
-function BinToInt(const AValue: String; const ADefault: Integer = 0): Integer; inline;
-function OctToInt(const AValue: String; const ADefault: Integer = 0): Integer; inline;
-function HexToInt(const AValue: String; const ADefault: Integer = 0): Integer; inline;
+function BinToInt(const AValue: String; const ADefault: Int64 = 0): Int64; inline;
+function OctToInt(const AValue: String; const ADefault: Int64 = 0): Int64; inline;
+function HexToInt(const AValue: String; const ADefault: Int64 = 0): Int64; inline;
 {$ENDREGION}
 
 implementation

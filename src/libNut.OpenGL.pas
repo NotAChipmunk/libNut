@@ -253,9 +253,9 @@ begin
 
     BitmapData.Width  := w;
     BitmapData.Height := h;
-    BitmapData.Format := TPixel32.Format;
+    BitmapData.Format := TRGBA32.Format;
 
-    if GdipBitmapLockBits(Image, TRect.Create(0, 0, w, h), 1, TPixel32.Format, BitmapData) <> 0 then
+    if GdipBitmapLockBits(Image, TRect.Create(0, 0, w, h), 1, TRGBA32.Format, BitmapData) <> 0 then
       raise EOpenGL.Create('Failed to lock texture data');
 
     Resize(w, h, False, BitmapData.Scan0);

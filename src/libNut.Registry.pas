@@ -64,6 +64,9 @@ type
 
 implementation
 
+uses
+  libNut.Platform;
+
 {$REGION 'TRegistry'}
 procedure TRegistry.SetRoot;
 begin
@@ -171,7 +174,7 @@ begin
     REG_EXPAND_SZ:
     begin
       SetLength(Result, Size - 1);
-      // TODO: Result := TEnvironment.Expand(Result);
+      Result := &Platform.ExpandEnv(Result);
     end;
   else
     Result := ADefault;

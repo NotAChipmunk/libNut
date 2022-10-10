@@ -35,10 +35,13 @@ type
     PPixels = ^TPixels;
     TPixels = array[0..0] of TPixel;
 
-    TBlockFill     = reference to procedure(ADest:          PPixels; const ALength, AStride: Integer; const AColour: TPixel);
+    TBlockFill     = reference to procedure(ADest:          PPixels; const ALength, AStride: Integer; const APixel: TPixel);
     TBlockTransfer = reference to procedure(ADest, ASource: PPixels; const ALength, AStride, ASourceStride: Integer);
   protected
     FBitmapData: TBitmapData;
+
+    function  InitMemory: Boolean; virtual;
+    procedure InitScanlines;       virtual;
   private
     FScanLines: array of PPixels;
 
@@ -60,32 +63,32 @@ type
 
     function Resize(const AWidth, AHeight: Integer): Boolean; virtual;
 
-    procedure BasicBlockFill    (ADest:          PPixels; const ALength, AStride: Integer; const AColour: TPixel);
+    procedure BasicBlockFill    (ADest:          PPixels; const ALength, AStride: Integer; const APixel: TPixel);
     procedure BasicBlockTransfer(ADest, ASource: PPixels; const ALength, AStride, ASourceStride: Integer);
 
-    procedure Clear(const AColour: TPixel);
+    procedure Clear(const APixel: TPixel);
 
     function  GetPixel(const X, Y: Integer): TPixel;
-    procedure SetPixel(const X, Y: Integer; const AColour: TPixel);
+    procedure SetPixel(const X, Y: Integer; const APixel: TPixel);
     property  Pixels  [const X, Y: Integer]: TPixel read GetPixel write SetPixel; default;
 
     function Sample(const U, V: Float): TPixel;
 
-    procedure HLine(X, Y, ALength: Integer; const AColour: TPixel);
-    procedure VLine(X, Y, ALength: Integer; const AColour: TPixel);
+    procedure HLine(X, Y, ALength: Integer; const APixel: TPixel);
+    procedure VLine(X, Y, ALength: Integer; const APixel: TPixel);
 
-    procedure Line(X1, Y1, X2, Y2: Integer; const AColour: TPixel);
+    procedure Line(X1, Y1, X2, Y2: Integer; const APixel: TPixel);
 
-    procedure Bezier(X1, Y1, X2, Y2, X3, Y3, X4, Y4: Integer; const AColour: TPixel; const ACount: Integer = 0);
+    procedure Bezier(X1, Y1, X2, Y2, X3, Y3, X4, Y4: Integer; const APixel: TPixel; const ACount: Integer = 0);
 
-    procedure Box(X, Y, W, H: Integer; const AColour: TPixel; const AFill: Boolean = False);
+    procedure Rectangle(X, Y, W, H: Integer; const APixel: TPixel; const AFill: Boolean = False);
 
-    procedure Circle (CX, CY, R:      Integer; const AColour: TPixel; const AFill: Boolean = False);
-    procedure Ellipse(CX, CY, RX, RY: Integer; const AColour: TPixel; const AFill: Boolean = False);
+    procedure Circle (CX, CY, R:      Integer; const APixel: TPixel; const AFill: Boolean = False);
+    procedure Ellipse(CX, CY, RX, RY: Integer; const APixel: TPixel; const AFill: Boolean = False);
 
-    procedure Triangle(X1, Y1, X2, Y2, X3, Y3: Integer; const AColour: TPixel; const AFill: Boolean = False);
+    procedure Triangle(X1, Y1, X2, Y2, X3, Y3: Integer; const APixel: TPixel; const AFill: Boolean = False);
 
-    procedure Render(const ABitmap: TCustomBitmap<TPixel>; const X, Y: Integer; const AFlipX: Boolean = False; const AFlipY: Boolean = False);
+    procedure Draw(const ABitmap: TCustomBitmap<TPixel>; const X, Y: Integer; const AFlipX: Boolean = False; const AFlipY: Boolean = False);
 
     property Width:  Integer index IndexWidth  read GetDimention write SetDimention;
     property Height: Integer index IndexHeight read GetDimention write SetDimention;
@@ -116,10 +119,43 @@ type
 
   {$REGION 'TBitmap'}
   TBitmap<TPixel: record> = class(TCustomBitmap<TPixel>)
-  public
-    function Resize(const AWidth, AHeight: Integer): Boolean; override;
+  protected
+    function InitMemory: Boolean; override;
   end;
   {$ENDREGION}
+
+  {$REGION 'TRGBA32'}
+  PRGBA32 = ^TRGBA32;
+  TRGBA32 = record
+  const
+    Format = 2498570;
+  public
+    class function  Create(const R, G, B: Byte): TRGBA32; static;
+    class property _Create[const R, G, B: Byte]: TRGBA32 read Create; default;
+
+    class operator Implicit(AValue: TRGBA32): Cardinal; overload; inline;
+    class operator Implicit(AValue: Cardinal): TRGBA32; overload; inline;
+
+    function Alpha(const A: Byte = $FF): TRGBA32; inline;
+  case Union of
+    0: (Components: array[0..3] of Byte);
+    1: (B, G, R, A: Byte);
+    2: (ARGB:       Cardinal);
+  end;
+  {$ENDREGION}
+
+  {$REGION 'TBitmap32'}
+  TBitmap32 = class(TBitmap<TRGBA32>)
+  public
+    constructor Create(const AWidth, AHeight: Integer);
+
+    procedure AlphaBlockFill    (ADest:          TBitmap32.PPixels; const ALength, AStride: Integer; const AColour: TRGBA32);
+    procedure AlphaBlockTransfer(ADest, ASource: TBitmap32.PPixels; const ALength, AStride, ASourceStride: Integer);
+  end;
+  {$ENDREGION}
+
+procedure AsmAlphaBlockFill    (ADest: Pointer;          const ALength, AStride: Integer; const AColour: Cardinal);
+procedure AsmAlphaBlockTransfer(ADest, ASource: Pointer; const ALength, AStride, ASourceStride: Integer);
 
 implementation
 
@@ -127,6 +163,26 @@ uses
   libNut.Maths;
 
 {$REGION 'TCustomBitmap'}
+function TCustomBitmap<TPixel>.InitMemory;
+begin
+  FBitmapData.Scan0 := nil;
+
+  Result := True;
+end;
+
+procedure TCustomBitmap<TPixel>.InitScanlines;
+begin
+  SetLength(FScanlines, FBitmapData.Height);
+
+  if FBitmapData.Height = 0 then
+    Exit;
+
+  FScanlines[0] := FBitmapData.Scan0;
+
+  for var i := 1 to FBitmapData.Height - 1 do
+    FScanlines[i] := PPixels(UIntPtr(FScanlines[i - 1]) + UIntPtr(FBitmapData.Stride));
+end;
+
 function TCustomBitmap<TPixel>.GetDimention;
 begin
   case AIndex of
@@ -230,12 +286,13 @@ var
   p1, p2: PByte;
 begin
   Result := ABitmapData.Reserved = FBitmapData.Scan0;
+
   if not Result then
     Exit;
 
   if (TBitmapLockMode.UserBuffer in ABitmapData.LockMode) and (TBitmapLockMode.Write in ABitmapData.LockMode) then
   begin
-    // TODO: Change to use BasicBlockTransfer
+    // MAYBE: Change to use BasicBlockTransfer
     p1 := Pointer(Integer(FScanlines[ABitmapData.LockX]) + Integer(ABitmapData.LockY shl 2));
     p2 := Pointer(ABitmapData.Scan0);
 
@@ -255,8 +312,8 @@ procedure TCustomBitmap<TPixel>.BasicBlockFill;
 begin
   for var i := 0 to ALength - 1 do
   begin
-    //ADest^[i * AStride] := AColour;
-    ADest^[0] := AColour;
+    //ADest^[i * AStride] := APixel;
+    ADest^[0] := APixel;
     ADest  := ADest + AStride;
   end;
 end;
@@ -280,21 +337,16 @@ begin
   FBitmapData.Height := AHeight;
   FBitmapData.Size   := FBitmapData.Stride * AHeight;
 
-  SetLength(FScanlines, AHeight);
+  Result := InitMemory;
 
-  if AHeight = 0 then
-    Exit(False);
-
-  FScanlines[0] := FBitmapData.Scan0;
-
-  for var i := 1 to AHeight - 1 do
-    FScanlines[i] := PPixels(UIntPtr(FScanlines[i - 1]) + UIntPtr(FBitmapData.Stride));
+  if Result then
+    InitScanlines;
 end;
 
 procedure TCustomBitmap<TPixel>.Clear;
 begin
   for var i := 0 to FBitmapData.Height - 1 do
-    BasicBlockFill(FScanlines[i], FBitmapData.Width, 1, AColour);
+    BasicBlockFill(FScanlines[i], FBitmapData.Width, 1, APixel);
 end;
 
 function TCustomBitmap<TPixel>.GetPixel;
@@ -311,9 +363,9 @@ begin
     Exit;
 
   if Assigned(FBlockFill) then
-    FBlockFill(@FScanlines[Y]^[X], 1, 1, AColour)
+    FBlockFill(@FScanlines[Y]^[X], 1, 1, APixel)
   else
-    FScanlines[Y]^[X] := AColour;
+    FScanlines[Y]^[X] := APixel;
 end;
 
 function TCustomBitmap<TPixel>.Sample;
@@ -344,7 +396,7 @@ begin
   if (X + ALength) >= FBitmapData.Width then
     ALength := FBitmapData.Width - X;
 
-  BlockFill(@FScanlines[Y]^[X], ALength, 1, AColour);
+  BlockFill(@FScanlines[Y]^[X], ALength, 1, APixel);
 end;
 
 procedure TCustomBitmap<TPixel>.VLine;
@@ -364,7 +416,7 @@ begin
   if (Y + ALength) >= FBitmapData.Height then
     ALength := FBitmapData.Height - Y;
 
-  BlockFill(@FScanlines[Y]^[X], ALength, FBitmapData.Stride div SizeOf(TPixel), AColour);
+  BlockFill(@FScanlines[Y]^[X], ALength, FBitmapData.Stride div SizeOf(TPixel), APixel);
 end;
 
 procedure TCustomBitmap<TPixel>.Line;
@@ -383,7 +435,7 @@ begin
   E := E div 2;
 
   repeat
-    SetPixel(X1, Y1, AColour);
+    SetPixel(X1, Y1, APixel);
 
     if (X1 = X2) and (Y1 = Y2) then
       Break;
@@ -422,7 +474,7 @@ begin
     XC := Round(P1 * X1 + 3 * T * P2 * X2 + 3 * T * T * (1 - T) * X3 + P3 * X4);
     YC := Round(P1 * Y1 + 3 * T * P2 * Y2 + 3 * T * T * (1 - T) * Y3 + P3 * Y4);
 
-    Line(SX, SY, XC, YC, AColour);
+    Line(SX, SY, XC, YC, APixel);
 
     SX := XC;
     SY := YC;
@@ -430,20 +482,20 @@ begin
     T := T + Resolution;
   end;
 
-  Line(SX, SY, X4, Y4, AColour);
+  Line(SX, SY, X4, Y4, APixel);
 end;
 
-procedure TCustomBitmap<TPixel>.Box;
+procedure TCustomBitmap<TPixel>.Rectangle;
 begin
   if AFill then
     for var i := Y to Y + H - 1 do
-      HLine(X, i, W, AColour)
+      HLine(X, i, W, APixel)
   else
   begin
-    HLine(X,         Y,         W, AColour);
-    HLine(X,         Y + H - 1, W, AColour);
-    VLine(X,         Y,         H, AColour);
-    VLine(X + W - 1, Y,         H, AColour);
+    HLine(X,         Y,         W, APixel);
+    HLine(X,         Y + H - 1, W, APixel);
+    VLine(X,         Y,         H, APixel);
+    VLine(X + W - 1, Y,         H, APixel);
   end;
 end;
 
@@ -459,21 +511,21 @@ begin
   begin
     if AFill then
     begin
-			HLine(CX - X, CY - Y, 1 + X * 2, AColour);
-			HLine(CX - Y, CY - X, 1 + Y * 2, AColour);
-			HLine(CX - X, CY + Y, 1 + X * 2, AColour);
-			HLine(CX - Y, CY + X, 1 + Y * 2, AColour);
+      HLine(CX - X, CY - Y, 1 + X * 2, APixel);
+      HLine(CX - Y, CY - X, 1 + Y * 2, APixel);
+      HLine(CX - X, CY + Y, 1 + X * 2, APixel);
+      HLine(CX - Y, CY + X, 1 + Y * 2, APixel);
     end
     else
     begin
-			SetPixel(CX - X, CY - Y, AColour);
-			SetPixel(CX - Y, CY - X, AColour);
-			SetPixel(CX + Y, CY - X, AColour);
-			SetPixel(CX + X, CY - Y, AColour);
-			SetPixel(CX - X, CY + Y, AColour);
-			SetPixel(CX - Y, CY + X, AColour);
-			SetPixel(CX + Y, CY + X, AColour);
-			SetPixel(CX + X, CY + Y, AColour);
+      SetPixel(CX - X, CY - Y, APixel);
+      SetPixel(CX - Y, CY - X, APixel);
+      SetPixel(CX + Y, CY - X, APixel);
+      SetPixel(CX + X, CY - Y, APixel);
+      SetPixel(CX - X, CY + Y, APixel);
+      SetPixel(CX - Y, CY + X, APixel);
+      SetPixel(CX + Y, CY + X, APixel);
+      SetPixel(CX + X, CY + Y, APixel);
     end;
 
 		if P < 0 then
@@ -500,13 +552,13 @@ begin
 
   if RY = 1 then
   begin
-    HLine(CX, CY, 1 + RX, AColour);
+    HLine(CX, CY, 1 + RX, APixel);
     Exit;
   end;
 
   if RX = 1 then
   begin
-    VLine(CX, CY, 1 + RY, AColour);
+    VLine(CX, CY, 1 + RY, APixel);
     Exit;
   end;
 
@@ -514,14 +566,14 @@ begin
 
   if AFill then
   begin
-    HLine(CX - RX, CY, 1 + (RX * 2), AColour);
+    HLine(CX - RX, CY, 1 + (RX * 2), APixel);
 
     for YY := 0 to RY do
     begin
       XX := Round(RX / RY * Sqrt((Sqr(RY)) - Sqr(YY - 0.5)));
 
-      HLine(CX - XX, CY + YY, 1 + (XX * 2), AColour);
-      HLine(CX - XX, CY - YY, 1 + (XX * 2), AColour);
+      HLine(CX - XX, CY + YY, 1 + (XX * 2), APixel);
+      HLine(CX - XX, CY - YY, 1 + (XX * 2), APixel);
     end;
   end
   else
@@ -534,10 +586,10 @@ begin
 
       for var j := xx to x2 do
       begin
-        SetPixel(CX + j, CY + YY, AColour);
-        SetPixel(CX - j, CY + YY, AColour);
-        SetPixel(CX + j, CY - YY, AColour);
-        SetPixel(CX - j, CY - YY, AColour);
+        SetPixel(CX + j, CY + YY, APixel);
+        SetPixel(CX - j, CY + YY, APixel);
+        SetPixel(CX + j, CY - YY, APixel);
+        SetPixel(CX - j, CY - YY, APixel);
       end;
 
       X2 := XX;
@@ -545,10 +597,10 @@ begin
 
     for var j := 0 to XX - 1 do
     begin
-      SetPixel(CX + j, CY + RY, AColour);
-      SetPixel(CX - j, CY + RY, AColour);
-      SetPixel(CX + j, CY - RY, AColour);
-      SetPixel(CX - j, CY - RY, AColour);
+      SetPixel(CX + j, CY + RY, APixel);
+      SetPixel(CX - j, CY + RY, APixel);
+      SetPixel(CX + j, CY - RY, APixel);
+      SetPixel(CX - j, CY - RY, APixel);
     end;
   end;
 end;
@@ -563,9 +615,9 @@ var
 begin
   if not AFill then
   begin
-    Line(X1, Y1, X2, Y2, AColour);
-    Line(X2, Y2, X3, Y3, AColour);
-    Line(X3, Y3, X1, Y1, AColour);
+    Line(X1, Y1, X2, Y2, APixel);
+    Line(X2, Y2, X3, Y3, APixel);
+    Line(X3, Y3, X1, Y1, APixel);
 
     Exit;
   end;
@@ -617,11 +669,11 @@ begin
         end;
 
     if AX <= BX then
-      HLine(AX, YY, BX - AX, AColour);
+      HLine(AX, YY, BX - AX, APixel);
   end;
 end;
 
-procedure TCustomBitmap<TPixel>.Render;
+procedure TCustomBitmap<TPixel>.Draw;
 var
   Scan:       Integer;
   XX, YY:     Int64;
@@ -703,29 +755,374 @@ end;
 {$ENDREGION}
 
 {$REGION 'TBitmap'}
-function TBitmap<TPixel>.Resize;
+function TBitmap<TPixel>.InitMemory;
 begin
   if FBitmapData.Scan0 <> nil then
     FreeMem(FBitmapData.Scan0);
 
-  FillChar(FBitmapData, SizeOf(FBitmapData), 0);
-
-  if (AWidth <> 0) and (AHeight <> 0) then
+  if (FBitmapData.Width <> 0) and (FBitmapData.Height <> 0) then
   begin
-    GetMem(FBitmapData.Scan0, (AWidth * SizeOf(TPixel)) * AHeight);
+    GetMem(FBitmapData.Scan0, (FBitmapData.Width * SizeOf(TPixel)) * FBitmapData.Height);
 
     if FBitmapData.Scan0 = nil then
-    begin
-      inherited Resize(0, 0);
       Exit(False);
-    end;
 
-    FBitmapData.Stride   := AWidth * SizeOf(TPixel);
+    FBitmapData.Stride   := FBitmapData.Width * SizeOf(TPixel);
     FBitmapData.LockMode := [TBitmapLockMode.Read, TBitmapLockMode.Write];
   end;
 
-  Result := inherited Resize(AWidth, AHeight);
+  Result := True;
 end;
+{$ENDREGION}
+
+{$REGION 'TRGBA32'}
+class function TRGBA32.Create;
+begin
+  Result.R := R;
+  Result.G := G;
+  Result.B := B;
+  Result.A := $FF;
+end;
+
+class operator TRGBA32.Implicit(AValue: TRGBA32): Cardinal;
+begin
+  Result := AValue.ARGB;
+end;
+
+class operator TRGBA32.Implicit(AValue: Cardinal): TRGBA32;
+begin
+  Result.ARGB := AValue;
+end;
+
+function TRGBA32.Alpha;
+begin
+  Result := Self;
+  Result.A := A;
+end;
+{$ENDREGION}
+
+{$REGION 'TBitmap32'}
+constructor TBitmap32.Create(const AWidth, AHeight: Integer);
+begin
+  inherited;
+
+  BlockFill     := AlphaBlockFill;
+  BlockTransfer := AlphaBlockTransfer;
+end;
+
+procedure TBitmap32.AlphaBlockFill;
+begin
+  AsmAlphaBlockFill(ADest, ALength, AStride * SizeOf(TRGBA32), AColour);
+end;
+
+procedure TBitmap32.AlphaBlockTransfer;
+begin
+  AsmAlphaBlockTransfer(ADest, ASource, ALength, AStride * SizeOf(TRGBA32), ASourceStride * SizeOf(TRGBA32));
+end;
+{$ENDREGION}
+
+{$REGION 'AlphaBlockXXX'}
+const
+  AlphaBias = $00800080;
+
+procedure AsmAlphaBlockFill(ADest: Pointer; const ALength, AStride: Integer; const AColour: Cardinal);
+{$IF DEFINED(CPUX86)}
+var
+  c1, c2: UIntPtr;
+begin
+  if ALength = 0 then
+    Exit;
+
+  asm
+    push ebx
+    push edi
+
+    mov edi, ADest
+
+    mov  eax, AColour
+
+    mov ecx, eax
+    shr ecx, 24
+
+    mov  ebx, eax
+    and  eax, $00FF00FF
+    and  ebx, $FF00FF00
+    imul eax, ecx
+    shr  ebx, 8
+    imul ebx, ecx
+    add  eax, AlphaBias
+    and  eax, $FF00FF00
+    shr  eax, 8
+    add  ebx, AlphaBias
+    and  ebx, $FF00FF00
+    or   eax, ebx
+
+    mov  c1, ecx
+    mov  c2, eax
+
+    mov ecx, ALength
+
+  @1:
+    push ecx
+
+    mov  ecx, c1
+    mov  eax, c2
+
+    mov  edx, [edi]
+    xor  ecx, $000000FF
+    mov  ebx, edx
+    and  edx, $00FF00FF
+    and  ebx, $FF00FF00
+    imul edx, ecx
+    shr  ebx, 8
+    imul ebx, ecx
+    add  edx, AlphaBias
+    and  edx, $FF00FF00
+    shr  edx, 8
+    add  ebx, AlphaBias
+    and  ebx, $FF00FF00
+    or   ebx, edx
+
+    add eax, ebx
+
+    mov [edi], eax
+
+    pop ecx
+
+    add edi, AStride
+
+    dec ecx
+    jnz @1
+
+    pop edi
+    pop ebx
+  end;
+end;
+{$ELSEIF DEFINED(CPUX64)}
+var
+  c1, c2: UIntPtr;
+asm
+  push rbx
+  push rdi
+
+  mov rdi, ADest
+
+  mov  eax, AColour
+
+  mov ecx, eax
+  shr ecx, 24
+
+  mov  ebx, eax
+  and  eax, $00FF00FF
+  and  ebx, $FF00FF00
+  imul eax, ecx
+  shr  ebx, 8
+  imul ebx, ecx
+  add  eax, AlphaBias
+  and  eax, $FF00FF00
+  shr  eax, 8
+  add  ebx, AlphaBias
+  and  ebx, $FF00FF00
+  or   eax, ebx
+
+  mov  c1, ecx
+  mov  c2, eax
+
+  mov ecx, ACount
+
+@1:
+  push rcx
+
+  mov  ecx, c1
+  mov  eax, c2
+
+  mov  edx, [edi]
+  xor  ecx, $000000FF
+  mov  ebx, edx
+  and  edx, $00FF00FF
+  and  ebx, $FF00FF00
+  imul edx, ecx
+  shr  ebx, 8
+  imul ebx, ecx
+  add  edx, AlphaBias
+  and  edx, $FF00FF00
+  shr  edx, 8
+  add  ebx, AlphaBias
+  and  ebx, $FF00FF00
+  or   ebx, edx
+
+  add eax, ebx
+
+  mov [edi], eax
+
+  pop rcx
+
+  add edi, AStride
+
+  dec ecx
+  jnz @1
+
+  pop rdi
+  pop rbx
+end;
+{$ELSE}
+begin
+  {$MESSAGE WARNING 'Unsupported CPU. Don't use AlphaTransfers'}
+end;
+{$ENDIF}
+
+procedure AsmAlphaBlockTransfer(ADest, ASource: Pointer; const ALength, AStride, ASourceStride: Integer);
+{$IF DEFINED(CPUX86)}
+asm
+  test ecx, ecx
+  js   @4
+
+  push ebx
+  push esi
+  push edi
+
+  mov esi, ASource
+  mov edi, ADest
+
+@1:
+  mov  eax, [esi]
+
+  test eax, $FF000000
+  jz   @3
+
+  push ecx
+
+  mov ecx, eax
+  shr ecx, 24
+
+  cmp ecx, $FF
+  jz  @2
+
+  mov  ebx, eax
+  and  eax, $00FF00FF
+  and  ebx, $FF00FF00
+  imul eax, ecx
+  shr  ebx, 8
+  imul ebx, ecx
+  add  eax, AlphaBias
+  and  eax, $FF00FF00
+  shr  eax, 8
+  add  ebx, AlphaBias
+  and  ebx, $FF00FF00
+  or   eax, ebx
+
+  mov  edx, [edi]
+  xor  ecx, $000000FF
+  mov  ebx, edx
+  and  edx, $00FF00FF
+  and  ebx, $FF00FF00
+  imul edx, ecx
+  shr  ebx, 8
+  imul ebx, ecx
+  add  edx, AlphaBias
+  and  edx, $FF00FF00
+  shr  edx, 8
+  add  ebx, AlphaBias
+  and  ebx, $FF00FF00
+  or   ebx, edx
+
+  add eax, ebx
+@2:
+  mov [edi], eax
+
+  pop ecx
+@3:
+  add esi, ASourceStride
+  add edi, AStride
+
+  dec ecx
+  jnz @1
+
+  pop edi
+  pop esi
+  pop ebx
+@4:
+end;
+{$ELSEIF DEFINED(CPUX64)}
+asm
+  push rbx
+  push rsi
+  push rdi
+
+  mov rsi, ASource
+  mov rdi, ADest
+
+  mov ecx, ACount
+  test ecx, ecx
+  js   @4
+
+@1:
+  push rcx
+
+  mov  eax, [rsi]
+
+  test eax, $FF000000
+  jz   @3
+
+  push rcx
+
+  mov ecx, eax
+  shr ecx, 24
+
+  cmp ecx, $FF
+  jz  @2
+
+  mov  ebx, eax
+  and  eax, $00FF00FF
+  and  ebx, $FF00FF00
+  imul eax, ecx
+  shr  ebx, 8
+  imul ebx, ecx
+  add  eax, AlphaBias
+  and  eax, $FF00FF00
+  shr  eax, 8
+  add  ebx, AlphaBias
+  and  ebx, $FF00FF00
+  or   eax, ebx
+
+  mov  edx, [rdi]
+  xor  ecx, $000000FF
+  mov  ebx, edx
+  and  edx, $00FF00FF
+  and  ebx, $FF00FF00
+  imul edx, ecx
+  shr  ebx, 8
+  imul ebx, ecx
+  add  edx, AlphaBias
+  and  edx, $FF00FF00
+  shr  edx, 8
+  add  ebx, AlphaBias
+  and  ebx, $FF00FF00
+  or   ebx, edx
+
+  add eax, ebx
+@2:
+  mov [rdi], eax
+
+  pop rcx
+@3:
+  add esi, ASourceStride
+  add edi, AStride
+
+  pop rcx
+  dec ecx
+  jnz @1
+
+  pop rdi
+  pop rsi
+  pop rbx
+@4:
+end;
+{$ELSE}
+begin
+  {$MESSAGE WARNING 'Unsupported CPU. Don't use AlphaTransfers'}
+end;
+{$ENDIF}
 {$ENDREGION}
 
 end.

@@ -8,6 +8,7 @@ uses
   libNut.Colours in '..\src\libNut.Colours.pas',
   libNut.Engine in '..\src\libNut.Engine.pas',
   libNut.Exceptions in '..\src\libNut.Exceptions.pas',
+  libNut.GDI in '..\src\libNut.GDI.pas',
   libNut.GDIPlus in '..\src\libNut.GDIPlus.pas',
   libNut.GUID in '..\src\libNut.GUID.pas',
   libNut.Hash in '..\src\libNut.Hash.pas',
@@ -31,7 +32,5 @@ uses
   libNut.Utils in '..\src\libNut.Utils.pas',
   libNut.Vectors in '..\src\libNut.Vectors.pas',
   libNut.Windows in '..\src\libNut.Windows.pas';
-
-begin
 
 end.

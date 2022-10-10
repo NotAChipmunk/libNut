@@ -5,7 +5,8 @@ unit libNut.Maths.Geometry;
 interface
 
 uses
-  libNut.Types;
+  libNut.Types,
+  libNut.Maths;
 
 type
   TAxis2D = (X, Y);
@@ -13,11 +14,13 @@ type
   TAxisV4 = (X, Y, Z, W);
 
   {$REGION 'TVector2f'}
-  PPoint2D = ^TVector2f;
+  PVector2f = ^TVector2f;
   TVector2f = record
   public
     class function  Create(const X, Y: Float): TVector2f; static; inline;
     class property _Create[const X, Y: Float]: TVector2f read Create; default;
+
+    class function SinCos(const ATheta: Extended): TVector2f; static; inline;
 
     {$REGION 'Implicit'}
     class operator Implicit(const AValue: Float):          TVector2f; overload; inline;
@@ -26,19 +29,19 @@ type
 
     {$REGION 'Operators'}
     class operator Add(const ALeft: TVector2f; const ARight: Float):          TVector2f; overload; inline;
-    class operator Add(const ALeft: TVector2f; const ARight: TVector2f):       TVector2f; overload; inline;
+    class operator Add(const ALeft: TVector2f; const ARight: TVector2f):      TVector2f; overload; inline;
     class operator Add(const ALeft: TVector2f; const ARight: array of Float): TVector2f; overload;
 
     class operator Subtract(const ALeft: TVector2f; const ARight: Float):          TVector2f; overload; inline;
-    class operator Subtract(const ALeft: TVector2f; const ARight: TVector2f):       TVector2f; overload; inline;
+    class operator Subtract(const ALeft: TVector2f; const ARight: TVector2f):      TVector2f; overload; inline;
     class operator Subtract(const ALeft: TVector2f; const ARight: array of Float): TVector2f; overload;
 
     class operator Multiply(const ALeft: TVector2f; const ARight: Float):          TVector2f; overload; inline;
-    class operator Multiply(const ALeft: TVector2f; const ARight: TVector2f):       TVector2f; overload; inline;
+    class operator Multiply(const ALeft: TVector2f; const ARight: TVector2f):      TVector2f; overload; inline;
     class operator Multiply(const ALeft: TVector2f; const ARight: array of Float): TVector2f; overload;
 
     class operator Divide(const ALeft: TVector2f; const ARight: Float):          TVector2f; overload; inline;
-    class operator Divide(const ALeft: TVector2f; const ARight: TVector2f):       TVector2f; overload; inline;
+    class operator Divide(const ALeft: TVector2f; const ARight: TVector2f):      TVector2f; overload; inline;
     class operator Divide(const ALeft: TVector2f; const ARight: array of Float): TVector2f; overload;
     {$ENDREGION}
 
@@ -94,6 +97,7 @@ type
   {$ENDREGION}
 
   {$REGION 'TVector3f'}
+  PVector3f = ^TVector3f;
   TVector3f = record
   public
     class function  Create(const X, Y: Float; const Z: Float = 1): TVector3f; static; inline;
@@ -107,23 +111,23 @@ type
 
     {$REGION 'Operators'}
     class operator Add(const ALeft: TVector3f; const ARight: Float):          TVector3f; overload; inline;
-    class operator Add(const ALeft: TVector3f; const ARight: TVector2f):       TVector3f; overload; inline;
-    class operator Add(const ALeft: TVector3f; const ARight: TVector3f):       TVector3f; overload; inline;
+    class operator Add(const ALeft: TVector3f; const ARight: TVector2f):      TVector3f; overload; inline;
+    class operator Add(const ALeft: TVector3f; const ARight: TVector3f):      TVector3f; overload; inline;
     class operator Add(const ALeft: TVector3f; const ARight: array of Float): TVector3f; overload;
 
     class operator Subtract(const ALeft: TVector3f; const ARight: Float):          TVector3f; overload; inline;
-    class operator Subtract(const ALeft: TVector3f; const ARight: TVector2f):       TVector3f; overload; inline;
-    class operator Subtract(const ALeft: TVector3f; const ARight: TVector3f):       TVector3f; overload; inline;
+    class operator Subtract(const ALeft: TVector3f; const ARight: TVector2f):      TVector3f; overload; inline;
+    class operator Subtract(const ALeft: TVector3f; const ARight: TVector3f):      TVector3f; overload; inline;
     class operator Subtract(const ALeft: TVector3f; const ARight: array of Float): TVector3f; overload;
 
     class operator Multiply(const ALeft: TVector3f; const ARight: Float):          TVector3f; overload; inline;
-    class operator Multiply(const ALeft: TVector3f; const ARight: TVector2f):       TVector3f; overload; inline;
-    class operator Multiply(const ALeft: TVector3f; const ARight: TVector3f):       TVector3f; overload; inline;
+    class operator Multiply(const ALeft: TVector3f; const ARight: TVector2f):      TVector3f; overload; inline;
+    class operator Multiply(const ALeft: TVector3f; const ARight: TVector3f):      TVector3f; overload; inline;
     class operator Multiply(const ALeft: TVector3f; const ARight: array of Float): TVector3f; overload;
 
     class operator Divide(const ALeft: TVector3f; const ARight: Float):          TVector3f; overload; inline;
-    class operator Divide(const ALeft: TVector3f; const ARight: TVector2f):       TVector3f; overload; inline;
-    class operator Divide(const ALeft: TVector3f; const ARight: TVector3f):       TVector3f; overload; inline;
+    class operator Divide(const ALeft: TVector3f; const ARight: TVector2f):      TVector3f; overload; inline;
+    class operator Divide(const ALeft: TVector3f; const ARight: TVector3f):      TVector3f; overload; inline;
     class operator Divide(const ALeft: TVector3f; const ARight: array of Float): TVector3f; overload;
     {$ENDREGION}
 
@@ -169,6 +173,7 @@ type
   {$ENDREGION}
 
   {$REGION 'TVector4f'}
+  PVector4f = ^TVector4f;
   TVector4f = record
   public
     class function  Create(const X, Y, Z: Float; const W: Float = 1): TVector4f; static; inline;
@@ -182,27 +187,27 @@ type
 
     {$REGION 'Operators'}
     class operator Add(const ALeft: TVector4f; const ARight: Float):          TVector4f; overload; inline;
-    class operator Add(const ALeft: TVector4f; const ARight: TVector2f):       TVector4f; overload; inline;
-    class operator Add(const ALeft: TVector4f; const ARight: TVector3f):       TVector4f; overload; inline;
-    class operator Add(const ALeft: TVector4f; const ARight: TVector4f):       TVector4f; overload; inline;
+    class operator Add(const ALeft: TVector4f; const ARight: TVector2f):      TVector4f; overload; inline;
+    class operator Add(const ALeft: TVector4f; const ARight: TVector3f):      TVector4f; overload; inline;
+    class operator Add(const ALeft: TVector4f; const ARight: TVector4f):      TVector4f; overload; inline;
     class operator Add(const ALeft: TVector4f; const ARight: array of Float): TVector4f; overload;
 
     class operator Subtract(const ALeft: TVector4f; const ARight: Float):          TVector4f; overload; inline;
-    class operator Subtract(const ALeft: TVector4f; const ARight: TVector2f):       TVector4f; overload; inline;
-    class operator Subtract(const ALeft: TVector4f; const ARight: TVector3f):       TVector4f; overload; inline;
-    class operator Subtract(const ALeft: TVector4f; const ARight: TVector4f):       TVector4f; overload; inline;
+    class operator Subtract(const ALeft: TVector4f; const ARight: TVector2f):      TVector4f; overload; inline;
+    class operator Subtract(const ALeft: TVector4f; const ARight: TVector3f):      TVector4f; overload; inline;
+    class operator Subtract(const ALeft: TVector4f; const ARight: TVector4f):      TVector4f; overload; inline;
     class operator Subtract(const ALeft: TVector4f; const ARight: array of Float): TVector4f; overload;
 
     class operator Multiply(const ALeft: TVector4f; const ARight: Float):          TVector4f; overload; inline;
-    class operator Multiply(const ALeft: TVector4f; const ARight: TVector2f):       TVector4f; overload; inline;
-    class operator Multiply(const ALeft: TVector4f; const ARight: TVector3f):       TVector4f; overload; inline;
-    class operator Multiply(const ALeft: TVector4f; const ARight: TVector4f):       TVector4f; overload; inline;
+    class operator Multiply(const ALeft: TVector4f; const ARight: TVector2f):      TVector4f; overload; inline;
+    class operator Multiply(const ALeft: TVector4f; const ARight: TVector3f):      TVector4f; overload; inline;
+    class operator Multiply(const ALeft: TVector4f; const ARight: TVector4f):      TVector4f; overload; inline;
     class operator Multiply(const ALeft: TVector4f; const ARight: array of Float): TVector4f; overload;
 
     class operator Divide(const ALeft: TVector4f; const ARight: Float):          TVector4f; overload; inline;
-    class operator Divide(const ALeft: TVector4f; const ARight: TVector2f):       TVector4f; overload; inline;
-    class operator Divide(const ALeft: TVector4f; const ARight: TVector3f):       TVector4f; overload; inline;
-    class operator Divide(const ALeft: TVector4f; const ARight: TVector4f):       TVector4f; overload; inline;
+    class operator Divide(const ALeft: TVector4f; const ARight: TVector2f):      TVector4f; overload; inline;
+    class operator Divide(const ALeft: TVector4f; const ARight: TVector3f):      TVector4f; overload; inline;
+    class operator Divide(const ALeft: TVector4f; const ARight: TVector4f):      TVector4f; overload; inline;
     class operator Divide(const ALeft: TVector4f; const ARight: array of Float): TVector4f; overload;
     {$ENDREGION}
 
@@ -336,14 +341,21 @@ type
 
 implementation
 
-uses
-  libNut.Maths;
-
 {$REGION 'TVector2f'}
 class function TVector2f.Create;
 begin
   Result.X := X;
   Result.Y := Y;
+end;
+
+class function TVector2f.SinCos;
+var
+  S, C: Extended;
+begin
+  libNut.Maths.SinCos(ATheta, S, C);
+
+  Result.Sin := S;
+  Result.Cos := C;
 end;
 
 {$REGION 'Implicit'}
@@ -581,12 +593,12 @@ end;
 
 function TVector2f.Rotate(const ATheta: Float): TVector2f;
 var
-  SC: TVector2f;
+  S, C: Extended;
 begin
-  // TODO: SC := SinCos(ATheta);
+  libNut.Maths.SinCos(ATheta, S, C);
 
-  Result.X := SC.Y * X - SC.X * Y;
-  Result.Y := SC.X * X + SC.Y * Y
+  Result.X := C * X - S * Y;
+  Result.Y := S * X + C * Y
 end;
 
 function TVector2f.Rotate(const ATheta: Float; const APos: TVector2f): TVector2f;
