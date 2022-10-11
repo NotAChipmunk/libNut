@@ -1,6 +1,6 @@
 program libNut;
 
-{$R *.res}
+{R *.res}
 
 uses
   libNut.Bitmaps in '..\src\libNut.Bitmaps.pas',
@@ -29,8 +29,9 @@ uses
   libNut.Types.Convert in '..\src\libNut.Types.Convert.pas',
   libNut.Types.Operator in '..\src\libNut.Types.Operator.pas',
   libNut.Types in '..\src\libNut.Types.pas',
-  libNut.Utils in '..\src\libNut.Utils.pas',
   libNut.Vectors in '..\src\libNut.Vectors.pas',
-  libNut.Windows in '..\src\libNut.Windows.pas';
+  libNut.Windows in '..\src\libNut.Windows.pas',
+  libNut.WinSock in '..\src\libNut.WinSock.pas',
+  libNut.Utils in '..\src\libNut.Utils.pas';
 
 end.

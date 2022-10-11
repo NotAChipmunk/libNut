@@ -17,6 +17,8 @@ type
 
   EStream = class(TException);
 
+  TOnReadWrite = procedure(const ASize: Int64) of object;
+
   {$REGION 'TStream'}
   TStream = class abstract
   private
@@ -26,17 +28,20 @@ type
     FCipherKey:   Integer;
     FCipherTable: array[0..CipherTableSize] of Byte;
 
+    FOnRead:  TOnReadWrite;
+    FOnWrite: TOnReadWrite;
+
     procedure SetCipherKey(const AValue: Integer);
     procedure BlockCipher(var AData; const ASize, AIndex: Int64);
 
+    function  GetPosition: Int64;
+    procedure SetPosition(const APosition: Int64);
+  protected
     function DoRead (var   AData; const ASize: Int64): Int64; virtual;
     function DoWrite(const AData; const ASize: Int64): Int64; virtual;
 
     function  GetSize: Int64;              virtual;
     procedure SetSize(const ASize: Int64); virtual;
-
-    function  GetPosition: Int64;
-    procedure SetPosition(const APosition: Int64);
   public
     constructor Create;
 
@@ -56,6 +61,9 @@ type
 
     property CipherKey: Integer read FCipherKey write SetCipherKey;
 
+    property OnRead:  TOnReadWrite read FOnRead  write FOnRead;
+    property OnWrite: TOnReadWrite read FOnWrite write FOnWrite;
+
     property BytesRead:    Int64 read FBytesRead;
     property BytesWritten: Int64 read FBytesWritten;
   end;
@@ -69,7 +77,7 @@ type
     FPosition: Int64;
 
     FAutoExpand: Boolean;
-
+  protected
     function DoRead (var   AData; const ASize: Int64): Int64; override;
     function DoWrite(const AData; const ASize: Int64): Int64; override;
 
@@ -98,7 +106,7 @@ type
     FHandle: THandle;
 
     FCloseOnFree: Boolean;
-
+  protected
     function DoRead (var   AData; const ASize: Int64): Int64; override;
     function DoWrite(const AData; const ASize: Int64): Int64; override;
   public
@@ -122,7 +130,7 @@ type
   TNativeFileStream = class(TStream)
   private
     FFile: TFile;
-
+  protected
     function DoRead (var   AData; const ASize: Int64): Int64; override;
     function DoWrite(const AData; const ASize: Int64): Int64; override;
   public
@@ -248,12 +256,14 @@ begin
 
   if Result > 0 then
   begin
-    //InterlockedCompareExchange64(FBytesRead, FBytesRead + Result, FBytesRead);
-    Inc(FBytesRead, Result);
+    AtomicIncrement(FBytesRead, Result);
 
     if FCipherKey <> 0 then
       BlockCipher(AData, ASize, CipherIndex);
   end;
+
+  if Assigned(FOnRead) then
+    FOnRead(Result);
 end;
 
 function TStream.Write(const AData; const ASize: Int64): Int64;
@@ -273,8 +283,10 @@ begin
     Result := DoWrite(AData, ASize);
 
   if Result > 0 then
-    //InterlockedCompareExchange64(FBytesWritten, FBytesWritten + Result, FBytesWritten);
-    Inc(FBytesWritten, Result);
+    AtomicIncrement(FBytesWritten, Result);
+
+  if Assigned(FOnWrite) then
+    FOnWrite(Result);
 end;
 
 function TStream.LoadFromStream;

@@ -66,6 +66,7 @@ type
 
     procedure Wait;
 
+    // MAYBE: "OnXXX" events should be protected?
     function OnStart: Boolean; virtual;
     function OnStop:  Integer; virtual;
 
