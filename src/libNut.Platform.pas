@@ -20,11 +20,14 @@ type
 
     class function GenerateGUID: TGUID; virtual;
 
-    class function  GetAllEnv: String; virtual;
-    class function  GetEnv(const AName: String; const ADefault: String = ''): String; virtual;
+    class function  GetAllEnv: String;                                                                       virtual;
+    class function  GetEnv(const AName: String; const ADefault: String = ''): String;                        virtual;
     class procedure SetEnv(const AName: String; const AValue:   String; const APersistent: Boolean = False); virtual;
 
     class function ExpandEnv(const AValue: String): String;
+
+    class function  GetClipboardStr: String;                                             virtual;
+    class procedure SetClipboardStr(const AStr: String; const AUnicode: Boolean = True); virtual;
   end;
   {$ENDREGION}
 
@@ -137,6 +140,17 @@ begin
     NamBuf := VarBuf.SplitFirst('=');
     Result := Result.Replace('%' + NamBuf + '%', VarBuf);
   until EnvBuf[i] = #0;
-end;{$ENDREGION}
+end;
+
+class function TPlatform.GetClipboardStr;
+begin
+  Result := '';
+end;
+
+class procedure TPlatform.SetClipboardStr;
+begin
+  {}
+end;
+{$ENDREGION}
 
 end.

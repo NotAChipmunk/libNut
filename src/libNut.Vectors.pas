@@ -177,6 +177,24 @@ type
   end;
   {$ENDREGION}
 
+  {$REGION 'TStrings'}
+  TStrings = class(TList<String>)
+  private
+    function  GetText:       String;
+    procedure SetText(AText: String);
+  public
+    // TODO: Load/Save
+
+    property AsText: String read GetText write SetText;
+  end;
+  {$ENDREGION}
+
+  {$REGION 'TIntegers'}
+  TIntegers = class(TList<Integer>)
+    // TODO: Load/Save
+  end;
+  {$ENDREGION}
+
 implementation
 
 uses
@@ -807,6 +825,33 @@ begin
   for var i := 0 to FCount - 1 do
     Swap(i, Random(FCount));
 end;
+{$ENDREGION}
+
+{$REGION 'TStrings'}
+function TStrings.GetText;
+begin
+  Result := '';
+
+  for var i := 0 to Count - 1 do
+    Result := Result + Items[i].RTrim + String.CharsCRLF;
+end;
+
+procedure TStrings.SetText;
+begin
+  Clear;
+
+  while AText.IsNotEmpty do
+  begin
+    Add(AText.SplitFirst(String.CharCR, False).RTrim);
+
+    if AText.FirstChar = String.CharLF then
+      AText := AText.Copy(2);
+  end;
+end;
+{$ENDREGION}
+
+{$REGION 'TIntegers'}
+
 {$ENDREGION}
 
 end.

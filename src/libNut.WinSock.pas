@@ -69,10 +69,10 @@ type
     FConnectionThrottle: TTime;
     FSessionThrottle:    TTime;
 
-    // TODO: FBannedIPs
+    FBlockedIPs: TIntegers;
 
-    FMaxConnections: Integer;
-    // TODO: FMaxConnectionsPerIP: Integer;
+    FMaxConnections:      Integer;
+    FMaxConnectionsPerIP: Integer;
 
     FBytesIn:  Int64;
     FBytesOut: Int64;
@@ -101,7 +101,10 @@ type
     property ConnectionThrottle: TTime read FConnectionThrottle write FConnectionThrottle;
     property SessionThrottle:    TTime read FSessionThrottle    write FSessionThrottle;
 
-    property MaxConnections: Integer read FMaxConnections write FMaxConnections;
+    property BlockedIPs: TIntegers read FBlockedIPs;
+
+    property MaxConnections:      Integer read FMaxConnections      write FMaxConnections;
+    property MaxConnectionsPerIP: Integer read FMaxConnectionsPerIP write FMaxConnectionsPerIP;
 
     property BytesIn:  Int64 read FBytesIn;
     property BytesOut: Int64 read FBytesOut;
@@ -400,13 +403,19 @@ begin
   FPort := 8081;
   FBind := '0.0.0.0';
 
+  FBlockedIPs := TIntegers.Create;
+
   FConnectionThrottle := 0.25;
-  FMaxConnections     := 0;
+  FSessionThrottle    := 0.05;
+
+  FMaxConnections      := 0;
+  FMaxConnectionsPerIP := 0;
 end;
 
 destructor TTCPServer.Destroy;
 begin
   FSessions.Free;
+  FBlockedIPs.Free;
 
   inherited;
 end;
@@ -456,11 +465,39 @@ begin
   &Platform.Sleep(FConnectionThrottle);
 
   if (FMaxConnections > 0) and (FSessions.Count >= FMaxConnections) then
-    Exit(False);
+    Exit;
 
   InSocket := FSocket.Accept(SockAddr);
   if InSocket = nil then
     Exit;
+
+  if FBlockedIPs.Exists(SockAddr.SIn_Addr.S_Addr) then
+  begin
+    InSocket.Free;
+    Exit;
+  end;
+
+  if FMaxConnectionsPerIP > 0 then
+  begin
+    CriticalSection.Enter;
+    try
+      var i: Integer := 0;
+
+      for Session in FSessions do
+        if Session.FIPv4Int = SockAddr.SIn_Addr.S_Addr then
+        begin
+          Inc(i);
+
+          if i = FMaxConnectionsPerIP then
+          begin
+            InSocket.Free;
+            Exit;
+          end;
+        end;
+    finally
+      CriticalSection.Leave;
+    end;
+  end;
 
   if not OnConnect(InSocket, SockAddr) then
   begin

@@ -42,6 +42,9 @@ type
     class function  GetAllEnv: String; override;
     class function  GetEnv(const AName: String; const ADefault: String = ''): String;                        override;
     class procedure SetEnv(const AName: String; const AValue:   String; const APersistent: Boolean = False); override;
+
+    class function  GetClipboardStr: String;                                             override;
+    class procedure SetClipboardStr(const AStr: String; const AUnicode: Boolean = True); override;
   end;
   {$ENDREGION}
 
@@ -300,6 +303,7 @@ var
 implementation
 
 uses
+  libNut.Strings,
   libNut.Registry;
   {Winapi.DwmApi,
   Winapi.CommCtrl,
@@ -399,6 +403,91 @@ begin
   end;
 
   SetEnvironmentVariable(PChar(AName), PChar(AValue));
+end;
+
+class function TPlatformWin.GetClipboardStr;
+var
+  h: THandle;
+  s: AnsiString;
+begin
+  Result := '';
+
+  if not OpenClipboard(0) then
+    Exit;
+
+  try
+    if IsClipboardFormatAvailable(CF_UNICODETEXT) then
+    begin
+      h := GetClipboardData(CF_UNICODETEXT);
+
+      if h = 0 then
+        Exit;
+
+      Result := PChar(GlobalLock(h));
+      GlobalUnlock(h);
+    end
+    else if IsClipboardFormatAvailable(CF_TEXT) then
+    begin
+      h := GetClipboardData(CF_TEXT);
+
+      if h = 0 then
+        Exit;
+
+      s := PAnsiChar(GlobalLock(h));
+      GlobalUnlock(h);
+
+      Result := String(s);
+    end;
+  finally
+    CloseClipboard;
+  end;
+end;
+
+class procedure TPlatformWin.SetClipboardStr;
+var
+  h:  THandle;
+  sw: String;
+  sa: AnsiString;
+  l:  Integer;
+  f:  Cardinal;
+begin
+  if AUnicode then
+  begin
+    sw := AStr + #0;
+    l  := (sw.Length + 1) * 2;
+    f  := CF_UNICODETEXT;
+  end
+  else
+  begin
+    sa := AnsiString(AStr) + AnsiChar(#0);
+    l  := System.Length(sa) + 1;
+    f  := CF_TEXT;
+  end;
+
+  h := GlobalAlloc(GMEM_MOVEABLE or GMEM_DDESHARE, l);
+
+  if h = 0 then
+    Exit;
+
+  try
+    if not OpenClipboard(0) then
+      Exit;
+
+    try
+      if AUnicode then
+        Move(sw[1], GlobalLock(h)^, l)
+      else
+        Move(sa[1], GlobalLock(h)^, l);
+
+      EmptyClipboard;
+      SetClipboardData(f, h);
+    finally
+      GlobalUnlock(h);
+      CloseClipboard;
+    end;
+  finally
+    GlobalFree(h);
+  end;
 end;
 {$ENDREGION}
 

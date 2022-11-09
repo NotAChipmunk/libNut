@@ -23,8 +23,8 @@ type
     CharsNumeric      = '0123456789';
     CharsAlphaNumeric = CharsAlpha + CharsNumeric;
 
-    CharsAccentUpper = 'àáâãäåæçèéêëìíîïðñòóôõöùúûüýþ';
-    CharsAccentLower = 'ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖÙÚÛÜÝÞ';
+    CharsAccentUpper = 'ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖÙÚÛÜÝÞ';
+    CharsAccentLower = 'àáâãäåæçèéêëìíîïðñòóôõöùúûüýþ';
 
     CharsUpper = CharsAlphaUpper + CharsAccentUpper;
     CharsLower = CharsAlphaLower + CharsAccentLower;
@@ -113,6 +113,7 @@ type
 
     function Uppercase(const AEnable: Boolean = True): String;
     function Lowercase(const AEnable: Boolean = True): String;
+    function Capitalize: String;
 
     function Remap(const ACharsFrom, ACharsTo: String): String;
 
@@ -121,6 +122,13 @@ type
     function Repeated(const ATimes: Integer): String;
 
     function Append(const AStr: String; const ASep: String = ' '): String;
+
+    function UnicodeMathOffset(const ABase: Integer; const ATable: String = CharsAlpha): String;
+    function UnicodeFont      (const ASansSerif: Boolean = False; const ABold: Boolean = False; const AItalic: Boolean = False): String;
+
+    function Script:    String; inline;
+    function Frakture:  String; inline;
+    function Monospace: String; inline;
 
     function ToInteger(const ADefault: Int64    = 0):     Int64;    inline;
     function ToFloat  (const ADefault: Extended = 0):     Extended; inline;
@@ -817,6 +825,23 @@ begin
     Result := Result.Remap(CharsUpper, CharsLower);
 end;
 
+function TStringHelper.Capitalize;
+var
+  j: Integer;
+begin
+  Result := Self.Lowercase;
+
+  for var i := 1 to Result.Length do
+  begin
+    j := System.Pos(Result[i], CharsLower);
+    if j > 0 then
+    begin
+      Result[i] := CharsUpper[j];
+      Break;
+    end;
+  end;
+end;
+
 function TStringHelper.Remap;
 var
   j: Integer;
@@ -860,6 +885,71 @@ begin
       Result := Result + ASep;
 
   Result := Result + AStr;
+end;
+
+function TStringHelper.UnicodeMathOffset;
+begin
+  Result := '';
+
+  for var c in Self do
+  begin
+    var i := ATable.Pos(c);
+
+    if i > 0 then
+      Result := Result + Char($D835) + Char(ABase + i - 1)
+    else
+      Result := Result + C;
+  end;
+end;
+
+function TStringHelper.UnicodeFont;
+var
+  Base: Word;
+begin
+  if (not ASansSerif) and (not ABold) and (not AItalic) then
+    Exit(Self);
+
+  if ASansSerif then
+    Base := $DDA0
+  else
+    Base := $DBCC;
+
+  if ABold then
+    Base := Base + $34;
+
+  if AItalic then
+    Base := Base + $68;
+
+  Result := UnicodeMathOffset(Base);
+
+  if (not ASansSerif) and (not ABold) then
+    Exit;
+
+  if ASansSerif then
+    Base := $DFE2
+  else
+    Base := $DFC4;
+
+  if ABold then
+    Base := Base + $A;
+
+  Result := Result.UnicodeMathOffset(Base, CharsNumeric);
+end;
+
+function TStringHelper.Script;
+begin
+  Result := UnicodeMathOffset($DCD0);
+end;
+
+function TStringHelper.Frakture;
+begin
+  Result := UnicodeMathOffset($DD6C);
+end;
+
+function TStringHelper.Monospace;
+begin
+  Result := UnicodeMathOffset($DE70);
+  Result := Result.UnicodeMathOffset($DFF6, CharsNumeric);
 end;
 
 function TStringHelper.ToInteger;
