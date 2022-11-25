@@ -4,6 +4,9 @@ unit libNut.Vectors;
 
 interface
 
+uses
+  libNut.Streams;
+
 type
   {$REGION 'TVector'}
   TVector<TItem> = record
@@ -183,7 +186,11 @@ type
     function  GetText:       String;
     procedure SetText(AText: String);
   public
-    // TODO: Load/Save
+    procedure LoadFromStream(const AStream:   TStream);
+    procedure LoadFromFile  (const AFileName: String);
+
+    procedure SaveToStream(const AStream:   TStream; AUnicode: Boolean = True);
+    procedure SaveToFile  (const AFileName: String;  AUnicode: Boolean = True);
 
     property AsText: String read GetText write SetText;
   end;
@@ -828,6 +835,26 @@ end;
 {$ENDREGION}
 
 {$REGION 'TStrings'}
+procedure TStrings.LoadFromStream;
+begin
+  AsText := LoadString(AStream);
+end;
+
+procedure TStrings.LoadFromFile;
+begin
+  AsText := LoadString(AFileName);
+end;
+
+procedure TStrings.SaveToStream;
+begin
+  SaveString(AsText, AStream, AUnicode);
+end;
+
+procedure TStrings.SaveToFile;
+begin
+  SaveString(AsText, AFileName, AUnicode);
+end;
+
 function TStrings.GetText;
 begin
   Result := '';

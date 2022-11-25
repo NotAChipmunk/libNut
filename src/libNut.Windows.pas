@@ -224,8 +224,10 @@ type
     FQuitOnClose: Boolean;
 
     class function WndProc(hWnd: HWND; uMsg: UINT; wParam: WPARAM; lParam: LPARAM; uIdSubclass: UINT_PTR; dwRefData: DWORD_PTR): LRESULT; stdcall; static;
+  protected
+    procedure SetHandle(const AHandle: HWND); virtual;
   public
-    constructor Create(const AHandle: HWND);
+    constructor Create(const AHandle: HWND = 0);
     destructor  Destroy; override;
 
     procedure StartSubClass;
@@ -235,7 +237,7 @@ type
 
     procedure DefaultHandler(var AMsg); override;
 
-    property Handle: HWND read FHandle;
+    property Handle: HWND read FHandle write SetHandle;
 
     property QuitOnClose: Boolean read FQuitOnClose write FQuitOnClose;
   end;
@@ -710,7 +712,16 @@ begin
   Result := WndMsg.LResult;
 end;
 
-constructor TSubclass.Create(const AHandle: HWND);
+procedure TSubClass.SetHandle;
+begin
+  EndSubClass;
+
+  FHandle := AHandle;
+
+  StartSubClass;
+end;
+
+constructor TSubclass.Create(const AHandle: HWND = 0);
 begin
   inherited Create;
 
@@ -718,7 +729,8 @@ begin
 
   FQuitOnClose := False;
 
-  StartSubclass;
+  if FHandle > 0 then
+    StartSubclass;
 end;
 
 destructor TSubclass.Destroy;

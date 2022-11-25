@@ -413,6 +413,9 @@ begin
     Result := Copy(1, i - 1).Trim(ATrim);
     Self   := Copy(i + ADelim.Length).Trim(ATrim);
   end;
+
+  if AOutOfQuotes then
+    Result := Result.Unquote;
 end;
 
 function TStringHelper.Split;
