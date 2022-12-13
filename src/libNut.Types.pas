@@ -22,6 +22,8 @@ type
 
   TTime = type Double;
 
+  TArray<TItem> = array of TItem;
+
 implementation
 
 end.

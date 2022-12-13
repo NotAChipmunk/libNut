@@ -62,6 +62,14 @@ end;
 {$ENDREGION}
 
 initialization
+  {
+    Delphi needs a:
+      ($MACRO OprProc(T, Opr, Op) TOperator<T>.Opr := function(const ALeft, ARight: T): T begin Result := ALeft Op ARight end;)
+
+    So this can be reduced to things like:
+      OprProc(Byte, AddProc, +)
+  }
+
   {$REGION 'Add'}
   // Unsigned
   TOperator<Byte>    .AddProc := function(const ALeft, ARight: Byte):     Byte     begin Result := ALeft + ARight end;

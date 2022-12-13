@@ -12,7 +12,7 @@ uses
   libNut.Types,
   libNut.Streams,
   libNut.Threads,
-  libNut.Vectors,
+  libNut.Collections,
 
   Winapi.Windows,
   Winapi.WinSock;

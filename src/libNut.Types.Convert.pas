@@ -44,6 +44,10 @@ function IntToHex(const AValue: Int64; const AMinSize: Integer = 2): String; inl
 function BinToInt(const AValue: String; const ADefault: Int64 = 0): Int64; inline;
 function OctToInt(const AValue: String; const ADefault: Int64 = 0): Int64; inline;
 function HexToInt(const AValue: String; const ADefault: Int64 = 0): Int64; inline;
+
+function VarRecToStr(const AValue: TVarRec; const ADefault: String = 'UNK?'): String;
+
+function AnyToStr(AValues: array of const; const ADelim: String = ''): String;
 {$ENDREGION}
 
 implementation
@@ -315,6 +319,43 @@ end;
 function HexToInt;
 begin
   Result := BaseXToInt(AValue, 16, ADefault);
+end;
+
+function VarRecToStr;
+begin
+  with TVarRec(AValue) do
+    case VType of
+      vtInteger:       Result := IntToStr(VInteger);
+      vtBoolean:       Result := BoolToStr(VBoolean);
+      vtChar:          Result := String(VChar);
+      vtWideChar:      Result := String(VWideChar);
+      vtExtended:      Result := FloatToStr(VExtended^);
+      vtString:        Result := String(VString);
+      vtPointer:       Result := PtrToStr(VPointer);
+      vtPChar:         Result := String(VPChar);
+      vtObject:        Result := VObject.ClassName + '(' + PtrToStr(@VObject) + ')';
+      vtClass:         Result := VClass.ClassName;
+      vtPWideChar:     Result := VPWideChar;
+      vtWideString:    Result := String(WideString(VWideString));
+      vtInt64:         Result := IntToStr(VInt64^);
+      vtUnicodeString: Result := String(UnicodeString(VUnicodeString));
+      vtAnsiString:    Result := String(AnsiString(VAnsiString));
+    else
+      Result := ADefault;
+    end;
+end;
+
+function AnyToStr;
+begin
+  Result := '';
+
+  for var i := Low(AValues) to High(AValues) do
+  begin
+    Result := Result + VarRecToStr(AValues[i]);
+
+    if i < High(AValues) then
+      Result := Result + ADelim;
+  end;
 end;
 {$ENDREGION}
 

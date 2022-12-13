@@ -5,11 +5,12 @@ unit libNut.Colours;
 interface
 
 uses
-  libNut.Maths.Geometry;
+  libNut.Vectors;
 
 type
   {$REGION 'Colour'}
   Colour = class abstract
+  {
   public const
     // Specials
     Null: TVector4f = (R:0; G:0; B:0; A:0);
@@ -226,6 +227,7 @@ type
     VioletRed:           TVector4f = (R:0.815686; G:0.125490; B:0.564706; A:1);
     VioletRedMedium:     TVector4f = (R:0.780392; G:0.082353; B:0.521569; A:1);
     VioletRedPale:       TVector4f = (R:0.858824; G:0.439216; B:0.576471; A:1);
+  }
   end;
   {$ENDREGION}
 

@@ -4,6 +4,12 @@ unit libNut.Strings;
 
 interface
 
+{
+  TODO:
+    Markup/markdown
+    QuoteString
+}
+
 type
   {$REGION 'TStringHelper'}
   TStringHelper = record helper for String
@@ -82,6 +88,7 @@ type
     function SplitFirst(const ADelim: String = ' '; const ATrim: Boolean = True; const AOutOfQuotes: Boolean = False): String;
     function Split     (const ADelim: String = ' '; const ATrim: Boolean = True; const AOutOfQuotes: Boolean = False): TArray<String>;
 
+    function IsIdentifier: Boolean;
     function SplitToken(const ARemove: Boolean = True): String;
 
     procedure SplitProc(const ASplitProc: TSplitProc; const ADelim: String = ' '; const AOutOfQuotes: Boolean = False);
@@ -106,6 +113,7 @@ type
     function Delete(const AIndex, ACount: Integer): String; inline;
 
     function Replace(const AFindStr, AReplaceStr: String; const AStart: Integer = 1; const AIgnoreCase: Boolean = False; const AOutOfQuotes: Boolean = False): String;
+    function {Replace}Params(AParams: array of const; const AOutOfQuotes: Boolean = True): String;
 
     function LAlign(const AMask: String): String;
     function RAlign(const AMask: String): String;
@@ -114,6 +122,8 @@ type
     function Uppercase(const AEnable: Boolean = True): String;
     function Lowercase(const AEnable: Boolean = True): String;
     function Capitalize: String;
+
+    function Rot13: String;
 
     function Remap(const ACharsFrom, ACharsTo: String): String;
 
@@ -437,11 +447,37 @@ begin
   end;
 end;
 
+function TStringHelper.IsIdentifier;
+var
+  t: String;
+begin
+  t := Self.Trim.Lowercase;
+
+  if t.IsEmpty or (not CharsIdentStart.Contains(T.FirstChar)) then
+    Exit(False);
+
+  t := t.Copy(2);
+
+  if t.IsNotEmpty then
+    for var c in t do
+      if not CharsIdent.Contains(c) then
+        Exit(False);
+
+  Result := True;
+end;
+
 function TStringHelper.SplitToken;
 const
-  DblTokens: array[0..19] of String{$IFDEF MSWINDOWS}[2]{$ENDIF} = (
-    '<>', '==', '!=', '<=', '>=', '<<', '>>', '&&', '||', '+=', '-=',
-    '++', '--', '&=', '^=', '|=', ':=', '/*', '*/', '//'
+  DblTokens: array[0..27] of String{$IFDEF MSWINDOWS}[2]{$ENDIF} = (
+    // Common
+    '<>', '==', '!=', '<=', '>=', '<<', '>>', '&&', '||', '%%',
+    '+=', '-=', '++', '--', '&=', '^=', '|=', ':=', '/*', '*/', '//',
+    // C++
+    '::', '->',
+    // Pascal
+    '(*', '*)', '{$',
+    // Markup
+    '</', '/>'
   );
 begin
   Result := '';
@@ -517,6 +553,13 @@ begin
           Inc(i);
           Break;
         end;
+
+    // FIXME: Special 3 char case
+    if (i < Length) and (Result = '==') and (Self[i] = '=') then
+    begin
+      Result := Result + '=';
+      Inc(i);
+    end;
   end;
 
   if ARemove then
@@ -769,6 +812,20 @@ begin
   end;
 end;
 
+function TStringHelper.{Replace}Params;
+var
+  i: Integer;
+begin
+  Result := Self;
+
+  i := Result.Pos('%*', 1, False, True);
+  if i > -1 then
+    Result := Result.Replace('%*', AnyToStr(AParams), 1, False, AOutOfQuotes);
+
+  for i := High(AParams) downto Low(AParams) do
+    Result := Result.Replace('%' + IntToStr(i - Low(AParams)), VarRecToStr(AParams[i]), 1, False, AOutOfQuotes);
+end;
+
 function TStringHelper.LAlign;
 begin
   Result := AMask;
@@ -842,6 +899,23 @@ begin
       Result[i] := CharsUpper[j];
       Break;
     end;
+  end;
+end;
+
+function TStringHelper.Rot13;
+const
+  CharTable = CharsAlphaLower + CharsAlphaLower + CharsAlphaUpper + CharsAlphaUpper;
+var
+  j: Integer;
+begin
+  Result  := Self;
+
+  for var i := 1 to Result.Length do
+  begin
+    j := CharTable.Pos(Result[i]);
+
+    if j > 0 then
+      Result[i] := CharTable[j + 13];
   end;
 end;
 

@@ -9,7 +9,7 @@ uses
   libNut.Windows,
   libNut.Exceptions,
   libNut.Timing,
-  libNut.Maths.Geometry,
+  libNut.Maths.Geometry2D,
 
   Winapi.Windows,
   Winapi.Messages,
@@ -65,19 +65,19 @@ type
 
     FButtons: array[Word] of TButtonState;
 
-    FMousePos:     TVector2f;
-    FMousePosLast: TVector2f;
+    FMousePos:     TPoint2D;
+    FMousePosLast: TPoint2D;
     FMouseScroll:  Integer;
     FMouseOver:    Boolean;
 
     FGamePad: TGamePadID;
 
-    FPadLStick:   TVector2f;
-    FPadRStick:   TVector2f;
+    FPadLStick:   TPoint2D;
+    FPadRStick:   TPoint2D;
     FPadShoulder: Float;
 
-    FPadLStickLast:   TVector2f;
-    FPadRStickLast:   TVector2f;
+    FPadLStickLast:   TPoint2D;
+    FPadRStickLast:   TPoint2D;
     FPadShoulderLast: Float;
 
     function GetButtonNoPoll(AButton: Word): TButtonState; inline;
@@ -85,7 +85,7 @@ type
     function GetButtonState(const AButton: Word):    TButtonState;
     function GetButtonBool (const AButton: Integer): Boolean; inline;
 
-    function GetMousePos:  TVector2f;
+    function GetMousePos:  TPoint2D;
     function GetMouseOver: Boolean;
 
     procedure ButtonPressed (const AButton: Word);
@@ -96,7 +96,7 @@ type
 
     procedure SetGamePad(const AGamePad: TGamePadID);
 
-    function GetGamePadStick(const AIndex: Integer): TVector2f;
+    function GetGamePadStick(const AIndex: Integer): TPoint2D;
     function GetGamePadShoulder: Float;
   public
     procedure PollGamePadButtons(const AEvent: Boolean = False);
@@ -108,14 +108,14 @@ type
     property Buttons[const AButton: Word]: TButtonState read GetButtonState; default;
     property ButtonsNoPoll[AButton: Word]: TButtonState read GetButtonNoPoll;
 
-    property MousePos:    TVector2f read GetMousePos;
+    property MousePos:    TPoint2D read GetMousePos;
     property MouseScroll: Integer   read FMouseScroll;
     property MouseOver:   Boolean   read GetMouseOver;
 
     property GamePad: TGamePadID read FGamePad write SetGamePad;
 
-    property GamePadLStick: TVector2f index 0 read GetGamePadStick;
-    property GamePadRStick: TVector2f index 1 read GetGamePadStick;
+    property GamePadLStick: TPoint2D index 0 read GetGamePadStick;
+    property GamePadRStick: TPoint2D index 1 read GetGamePadStick;
 
     property GamePadShoulder: Float read GetGamePadShoulder;
 
@@ -278,7 +278,7 @@ type
 
     procedure OnMouseMoved(const ADeltaX, ADeltaY: Float; const ADeltaScroll: Integer); virtual;
 
-    procedure OnGamePadMoved(const ADeltaL, ADeltaR: TVector2f; const ADeltaShoulder: Float); virtual;
+    procedure OnGamePadMoved(const ADeltaL, ADeltaR: TPoint2D; const ADeltaShoulder: Float); virtual;
 
     property Title: String read FTitle write SetTitle;
 
@@ -406,7 +406,7 @@ begin
     Result := FMousePos;
   end
   else
-    Result := TVector2f[CursorPos.X, CursorPos.Y];
+    Result := TPoint2D[CursorPos.X, CursorPos.Y];
 end;
 
 function TInput.GetMouseOver: Boolean;
@@ -455,7 +455,7 @@ begin
     FMouseOver := (SX >= 0) and (SX < FEngine.FWidth) and (SY >= 0) and (SY < FEngine.FHeight);
   end;
 
-  FMousePos := TVector2f[SX, SY];
+  FMousePos := TPoint2D[SX, SY];
 
   if Assigned(FEngine) and AEvent then
     FEngine.OnMouseMoved(FMousePos.X - FMousePosLast.X, FMousePos.Y - FMousePosLast.Y, 0);
@@ -491,7 +491,7 @@ begin
     0: Result := FPadLStick;
     1: Result := FPadRStick;
   else
-    Result := TVector2f.Zero
+    Result := TPoint2D.Zero
   end;
 end;
 
@@ -599,7 +599,7 @@ end;
 procedure TInput.PollGamePadSticks;
 var
   JoyInfo: JOYINFOEX;
-  DL, DR:  TVector2f;
+  DL, DR:  TPoint2D;
   DS:      Float;
 begin
   if FGamePad = TGamePadID.None then
@@ -638,12 +638,12 @@ procedure TInput.Reset;
 begin
   FillChar(FButtons, SizeOf(FButtons), 0);
 
-  FMousePos     := TVector2f.Zero;
+  FMousePos     := TPoint2D.Zero;
   FMousePosLast := FMousePos;
   FMouseOver    := False;
 
-  FPadLStick := TVector2f.Zero;
-  FPadRStick := TVector2f.Zero;
+  FPadLStick := TPoint2D.Zero;
+  FPadRStick := TPoint2D.Zero;
 
   FPadLStickLast := FPadLStick;
   FPadRStickLast := FPadRStick;

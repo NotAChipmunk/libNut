@@ -54,6 +54,9 @@ function Map(const AValue, AFromLow, AFromHigh, AToLow, AToHigh: Extended): Exte
 function DegToRad(const ADeg: Extended): Extended;
 function RadToDeg(const ARad: Extended): Extended;
 
+function NormToRad(const ANorm: Extended): Extended;
+function RadToNorm(const ARad:  Extended): Extended;
+
 procedure SinCos(const ATheta: Extended; var ASin, ACos: Extended); inline;
 {$ENDREGION}
 
@@ -278,6 +281,16 @@ end;
 function RadToDeg;
 begin
   Result := ARad * (180 / PI);
+end;
+
+function NormToRad;
+begin
+  Result := ANorm * PI2;
+end;
+
+function RadToNorm;
+begin
+  Result := ARad / PI2;
 end;
 
 procedure SinCos;

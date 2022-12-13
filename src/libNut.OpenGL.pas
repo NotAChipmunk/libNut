@@ -9,7 +9,8 @@ uses
   libNut.Engine,
   libNut.Bitmaps,
   libNut.GDIPlus,
-  libNut.Maths.Geometry,
+  libNut.Vectors,
+  libNut.Maths.Geometry2D,
 
   Winapi.Windows,
   Winapi.OpenGL,
@@ -625,7 +626,7 @@ end;
 
 procedure TOpenGL.Clear;
 begin
-  glClearColor(AColour.R, AColour.G, AColour.B, AColour.A);
+  glClearColor(AColour[0], AColour[1], AColour[2], AColour[3]);
   glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT);
 end;
 
